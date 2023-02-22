@@ -17,9 +17,10 @@ begin
     PrintAdjacencyMatrix (MyGraph);
     WriteDotFile (MyGraph, 'graph.gv'); *)
     Randomize;
-    RndGraph := RandomGraph ();
+    RndGraph := RandomGraph (3, 12);
     PrintGraph (RndGraph);
     PrintAdjacencyList (RndGraph);
     PrintAdjacencyMatrix (RndGraph);
-    WriteDotFile (RndGraph, 'randgraph.gv');
+    WriteDotFilePoint (RndGraph, 'point.gv');
+    WriteDotFileColor (RndGraph, 'color.gv');
 end.

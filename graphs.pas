@@ -33,11 +33,12 @@ type
     StringArray = array of string;
 
 function ReadGraph (n, m : integer) : Graph;
-function RandomGraph () : Graph;
+function RandomGraph (MinNodes, MaxNodes : integer) : Graph;
 procedure PrintGraph (InGraph : Graph);
 procedure PrintAdjacencyList (InGraph : Graph);
 procedure PrintAdjacencyMatrix (InGraph : Graph);
-procedure WriteDotFile (InGraph : Graph; Filename : String);
+procedure WriteDotFilePoint (InGraph : Graph; Filename : String);
+procedure WriteDotFileColor (InGraph : Graph; Filename : String);
 
 implementation
 
@@ -74,12 +75,12 @@ function ReadGraph (n, m : integer) : Graph;
         ReadGraph.Edges := ReadEdges (m)
     end;
 
-function RandomGraph () : Graph;
+function RandomGraph (MinNodes, MaxNodes : integer) : Graph;
     var
         n, m, i, j : integer;
         LocalGraph : Graph;
     begin
-        n := RandInt (2, 12);
+        n := RandInt (MinNodes, MaxNodes);
         LocalGraph.n := n;
         LocalGraph.Nodes := ReadNodes (n);
         setlength (LocalGraph.Edges, (n * (n - 1)) div 2);
@@ -95,20 +96,6 @@ function RandomGraph () : Graph;
         setlength (LocalGraph.Edges, m);
         LocalGraph.m := m;
         RandomGraph := LocalGraph
-    end;
-
-procedure PrintNodes (Nodes : NodeArray; n : integer);
-    var
-        i : integer;
-    begin
-        write ('{');
-        for i := 0 to n - 1 do
-            begin
-                write(Nodes[i]);
-                if i < n - 1 then
-                    write(',')
-            end;
-        writeln ('}')
     end;
 
 function AdjacencyList (InGraph : Graph) : ListArray;
@@ -132,6 +119,14 @@ function AdjacencyList (InGraph : Graph) : ListArray;
         AdjacencyList := AdjLis
     end;
 
+procedure DestroyAdjacencyList (AdjLis : ListArray; n : integer);
+    var
+        i : integer;
+    begin
+        for i := 0 to n - 1 do
+            AdjLis[i] := DestroyList (AdjLis[i]);
+    end;
+
 function AdjacencyMatrix (InGraph : Graph) : Matrix;
     var
         i, v1, v2 : integer;
@@ -149,18 +144,130 @@ function AdjacencyMatrix (InGraph : Graph) : Matrix;
         AdjacencyMatrix := AdjMat
     end;
 
+function Degree (v : integer; AdjLis : ListArray) : integer;
+    begin
+        Degree := ListLength (Adjlis[v - 1])
+    end;
+
+function Neighbors (v : integer; AdjLis : ListArray) : List;
+    begin
+        Neighbors := AdjLis[v - 1]
+    end;
+
+function Adjacent (v1, v2 : integer; AdjLis : ListArray) : boolean;
+    begin
+        Adjacent := ListFind (AdjLis[v1 - 1], v2)
+    end;
+
+function AnyAdjacent (v : integer; Nodes : List; AdjLis : ListArray) : boolean;
+    var
+        Curr : List;
+    begin
+        Curr := Nodes;
+        while (Curr <> Nil) do
+            begin
+                if Adjacent (v, Curr^.Data, AdjLis) then
+                    begin
+                        AnyAdjacent := True;
+                        exit
+                    end;
+                Curr := Curr^.Next
+            end;
+        AnyAdjacent := False
+    end;
+
 (* Welch-Powell Coloring Algorithm - Lipschutz Discrete Mathematics *)
+(* Very inefficient, but built by myself. *)
+(* "I should rather do something poorly by myself than have it done for
+* me well." -Grover Cleveland *)
 function ColorNodes (InGraph : Graph) : StringArray;
     const
         Colors: array[0..6] of string = ('red','orange','yellow','green','blue','indigo','violet');
     var
+        i, n, Node, ColorIdx : integer;
+        ColorQueue, NodeList, NonAdjacent, ThisColor, Curr : List;
+        AdjLis : ListArray;
+    begin
+        n := InGraph.n;
+        AdjLis := AdjacencyList (InGraph);
+        ColorNodes := Nil;
+        setlength (ColorNodes, n);
+        NodeList := Nil;
+        for i := 1 to n do
+            NodeList := ListAppend (NodeList, NodeList, i);
+        ColorQueue := Nil;
+        for i := 0 to 6 do
+            ColorQueue := ListAppend(ColorQueue, ColorQueue, i);
+        while (ColorQueue <> Nil) and (NodeList <> Nil) do
+            begin
+                (* writeln ('ColorQueue');
+                PrintList (ColorQueue);
+                writeln ('NodeList');
+                PrintList (NodeList); *)
+                ColorIdx := ListPop (ColorQueue);
+                (* find non-neighbor nodes *)
+                Node := NodeList^.Data;
+                ThisColor := Nil;
+                NonAdjacent := Nil;
+                NonAdjacent := ListAppend(NonAdjacent, NonAdjacent, Node);
+                Curr := NodeList;
+                while (Curr <> Nil) do
+                    begin
+                        if not Adjacent (Node, Curr^.Data, AdjLis) then
+                            NonAdjacent := ListAppend (NonAdjacent, NonAdjacent, Curr^.Data);
+                        Curr := Curr^.Next
+                    end;
+                NonAdjacent := ListRemove (NonAdjacent, NonAdjacent, Node);
+                (* now check if can be assigned to Node non-neighbors *)
+                (* writeln ('NonAdjacent');
+                PrintList (NonAdjacent); *)
+                Curr := NonAdjacent;
+                while (Curr <> Nil) do
+                    begin
+                        if not AnyAdjacent (Curr^.Data, ThisColor, AdjLis) then
+                            ThisColor := ListAppend (ThisColor, ThisColor, Curr^.Data);
+                        Curr := Curr^.Next
+                    end;
+                (* writeln ('ThisColor');
+                PrintList (ThisColor); *)
+                (* Now assign current color to nodes and remove said
+                * nodes *)
+                Curr := ThisColor;
+                while (Curr <> Nil) and (NodeList <> Nil) do
+                    begin
+                        ColorNodes[Curr^.Data - 1] := Colors[ColorIdx];
+                        NodeList := ListRemove(NodeList, Nodelist, Curr^.Data);
+                        Curr := Curr^.Next
+                    end;
+                ThisColor := DestroyList (ThisColor);
+                NonAdjacent := DestroyList (NonAdjacent);
+            end;
+
+        if (ColorQueue <> Nil) then
+            ColorQueue := DestroyList (ColorQueue);
+        DestroyAdjacencyList (AdjLis, n);
+        (* writeln ('ColorNodes');
+        for i := 0 to n - 1 do
+            writeln (i + 1, ': ', ColorNodes[i]); *)
+
+        for i := 0 to n - 1 do
+            ColorNodes[i] := Concat (IntToStr(i + 1), ' [fillcolor=', ColorNodes[i], ']');
+    end;
+
+procedure PrintNodes (Nodes : NodeArray; n : integer);
+    var
         i : integer;
     begin
-        ColorNodes := Nil;
-        setlength (ColorNodes, InGraph.n);
-        for i := 0 to InGraph.n - 1 do
-            ColorNodes[i] := Concat (IntToStr(i + 1), ' [fillcolor=', Colors[i mod 7], ']');
+        write ('{');
+        for i := 0 to n - 1 do
+            begin
+                write(Nodes[i]);
+                if i < n - 1 then
+                    write(',')
+            end;
+        writeln ('}')
     end;
+
 
 procedure PrintEdges (Edges : EdgeArray; m : integer);
     var
@@ -214,7 +321,28 @@ procedure PrintAdjacencyMatrix (InGraph : Graph);
         writeln
     end;
 
-procedure WriteDotFile (InGraph : Graph; Filename : String);
+procedure WriteDotFilePoint (InGraph : Graph; Filename : String);
+    var
+        i, v1, v2 : integer;
+        Outfile : text;
+    begin
+        assign (Outfile, Filename);
+        rewrite (Outfile);
+        writeln (Outfile, 'graph {');
+        writeln (Outfile, 'layout=circo;');
+        writeln (Outfile, 'node [shape=point]');
+        for i := 0 to InGraph.m - 1 do
+            begin
+                v1 := InGraph.Edges[i][1];
+                v2 := InGraph.Edges[i][2];
+                writeln (Outfile, v1, ' -- ', v2);
+            end;
+        writeln (Outfile, '}');
+        close (Outfile);
+        writeln ('graph dot data dumped to file ', Filename)
+    end;
+
+procedure WriteDotFileColor (InGraph : Graph; Filename : String);
     var
         i, v1, v2 : integer;
         NodeColors : StringArray;
@@ -225,7 +353,6 @@ procedure WriteDotFile (InGraph : Graph; Filename : String);
         rewrite (Outfile);
         writeln (Outfile, 'graph {');
         writeln (Outfile, 'layout=circo;');
-        (* writeln (Outfile, 'node [shape=point]'); *)
         writeln (Outfile, 'node [style=filled]');
         for i := 0 to InGraph.m - 1 do
             begin

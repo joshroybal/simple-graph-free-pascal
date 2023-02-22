@@ -12,6 +12,7 @@ type
 function ListAdd (Head : PNode; Payload : Integer) : PNode;
 function ListAppend (Head, Next : PNode; Payload : Integer) : PNode;
 function ListInsert (Head, Next : PNode; Payload : Integer) : PNode;
+function ListRemove (Head, Next : PNode; Payload : Integer) : PNode;
 function ListLength (Head : PNode) : Integer;
 function ListFind (Head : PNode; Payload : Integer) : Boolean;
 function ListPop (var Head : PNode) : Integer;
@@ -81,6 +82,37 @@ function ListInsert (Head, Next : PNode; Payload : Integer) : PNode;
       end;
       ListInsert := ListInsert (Head, Next^.Next, Payload)
   end;
+
+function ListRemove (Head, Next : PNode; Payload : Integer) : PNode;
+  var
+    Tag : PNode;
+  begin
+    if Head = Nil then (* empty list *)
+      exit (Head);
+    if Payload = Head^.Data then (* delete head node *)
+      begin
+        Next := Head;
+        Head := Head^.Next;
+        dispose (Next);
+        exit (Head)
+      end;
+    if Next = Nil then
+        exit (Head);
+    if Next^.Next = Nil then
+        begin
+            ListRemove := Head;
+            exit
+        end;
+    if Payload = Next^.Next^.Data then
+      begin
+        Tag := Next^.Next;
+        Next^.Next := Next^.Next^.Next;
+        dispose (Tag);
+        exit (Head)
+      end;
+      ListRemove := ListRemove (Head, Next^.Next, Payload)
+  end;
+
 
 function ListPop (var Head : PNode) : Integer;
   var
