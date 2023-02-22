@@ -2,9 +2,9 @@ unit LinkedList;
 
 interface
 
-type 
+type
   Node = Record
-    Data: Integer;
+    Data : Integer;
     Next : ^Node
   end;
   PNode = ^Node;
@@ -12,6 +12,8 @@ type
 function ListAdd (Head : PNode; Payload : Integer) : PNode;
 function ListAppend (Head, Next : PNode; Payload : Integer) : PNode;
 function ListInsert (Head, Next : PNode; Payload : Integer) : PNode;
+function ListLength (Head : PNode) : Integer;
+function ListFind (Head : PNode; Payload : Integer) : Boolean;
 function ListPop (var Head : PNode) : Integer;
 function ReverseList (Head, Prev : PNode) : PNode;
 function DestroyList (Head : PNode) : PNode;
@@ -92,6 +94,22 @@ function ListPop (var Head : PNode) : Integer;
     ListPop := Item
   end;
 
+function ListLength (Head : PNode) : Integer;
+  begin
+    if Head = Nil then
+      exit (0);
+    ListLength := 1 + ListLength (Head^.Next)
+  end;
+
+function ListFind (Head : PNode; Payload : Integer) : Boolean;
+  begin
+    if Head = Nil then
+      exit (False);
+    if Head^.Data = Payload then
+      exit (True);
+    ListFind := ListFind (Head^.Next, Payload)
+  end;
+
 function ReverseList (Head, Prev : PNode) : PNode;
   var
     Body : PNode;
@@ -116,6 +134,11 @@ function DestroyList (Head : PNode) : PNode;
 
 procedure PrintList (Head : PNode);
   begin
+    if Head = Nil then
+        begin
+            writeln;
+            exit
+        end;
     if Head^.Next = Nil then
       begin
         writeln (Head^.Data);
