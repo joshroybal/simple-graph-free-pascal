@@ -184,17 +184,36 @@ function ColorNodes (InGraph : Graph) : StringArray;
     const
         Colors: array[0..6] of string = ('red','orange','yellow','green','blue','indigo','violet');
     var
-        i, n, Node, ColorIdx : integer;
+        i, j, n, tmp, MaxIdx, Node, ColorIdx : integer;
         ColorQueue, NodeList, NonAdjacent, ThisColor, Curr : List;
         AdjLis : ListArray;
+        Degrees : array of integer;
     begin
         n := InGraph.n;
         AdjLis := AdjacencyList (InGraph);
         ColorNodes := Nil;
         setlength (ColorNodes, n);
+        Degrees := Nil;
+        setlength (Degrees, n);
+        for i := 0 to n - 1 do
+            Degrees[i] := i;
+        (* select sort nodes by degree *)
+        for i := 0 to n - 2 do
+            begin
+                MaxIdx := i;
+                for j := i + 1 to n - 1 do
+                    if Degree (Degrees[j] + 1, AdjLis) > Degree (Degrees[MaxIdx] + 1, AdjLis) then
+                        MaxIdx := j;
+                if MaxIdx <> i then
+                    begin
+                        tmp := Degrees[i];
+                        Degrees[i] := Degrees[MaxIdx];
+                        Degrees[MaxIdx] := tmp
+                    end;
+            end;
         NodeList := Nil;
-        for i := 1 to n do
-            NodeList := ListAppend (NodeList, NodeList, i);
+        for i := 0 to n - 1 do
+            NodeList := ListAppend (NodeList, NodeList, InGraph.Nodes[Degrees[i]]);
         ColorQueue := Nil;
         for i := 0 to 6 do
             ColorQueue := ListAppend(ColorQueue, ColorQueue, i);
